@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Minha Loja</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--bg:#f4f6fb;--card:#fff;--tx:#1b2333;--mu:#6b7280;--pr:#4f46e5;--ok:#16a34a;--rd:#dc2626;--bd:#e5e7eb}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:var(--bg);color:var(--tx)}
+header{background:var(--card);border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:10px;padding:12px 20px;flex-wrap:wrap}
+header h1{font-size:1.2rem;margin:0;flex:1;cursor:pointer}
+.btn{border:0;background:var(--pr);color:#fff;padding:10px 16px;border-radius:10px;font-size:.92rem;cursor:pointer}
+.btn.g{background:var(--ok)}.btn.r{background:var(--rd)}.btn.l{background:#eceef4;color:var(--tx)}.btn.s{padding:6px 10px;font-size:.8rem}
+main{max-width:1050px;margin:20px auto;padding:0 16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px}
+.pimg{width:100%;height:150px;object-fit:cover;border-radius:10px;background:#eceef4;display:flex;align-items:center;justify-content:center;font-size:2.5rem}
+h3{margin:10px 0 2px;font-size:1rem}.price{font-weight:700;color:var(--pr)}.mu{color:var(--mu);font-size:.85rem}
+.row{display:flex;align-items:center;gap:8px;margin-top:10px}
+.qty{display:flex;align-items:center;border:1px solid var(--bd);border-radius:10px}
+.qty button{border:0;background:none;width:32px;height:34px;font-size:1.1rem;cursor:pointer}.qty span{min-width:26px;text-align:center}
+input,select,textarea{width:100%;padding:10px;border:1px solid var(--bd);border-radius:10px;font:inherit;margin:4px 0 10px}
+label{font-size:.85rem;color:var(--mu)}
+.hide{display:none!important}
+.bar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}.bar input,.bar select{margin:0;flex:1;min-width:140px}
+.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tabs button{border:0;background:#eceef4;padding:9px 14px;border-radius:10px;cursor:pointer}.tabs button.on{background:var(--pr);color:#fff}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px}.stats b{font-size:1.5rem;display:block}
+.modal{position:fixed;inset:0;background:#0007;display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
+.box{background:#fff;border-radius:16px;padding:22px;width:100%;max-width:430px;max-height:92vh;overflow:auto}
+.item{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--bd);font-size:.92rem}
+.tot{display:flex;justify-content:space-between;font-weight:700;font-size:1.15rem;margin:14px 0}
+#qr{width:230px;margin:10px auto;display:block}#qr img{width:100%}
+.tag{font-size:.75rem;padding:3px 9px;border-radius:99px;background:#fef3c7;color:#92400e}.tag.pago{background:#dcfce7;color:#166534}.tag.cancelado{background:#fee2e2;color:#991b1b}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1b2333;color:#fff;padding:10px 18px;border-radius:10px;z-index:20}
+.center{text-align:center}
+</style>
+</head>
+<body>
+<header>
+  <h1 id="brand" onclick="go('loja')">🛍️ Minha Loja</h1>
+  <button class="btn" onclick="openCart()">🛒 Carrinho <b id="cnt">0</b></button>
+  <button class="btn l" onclick="go('admin')">🔒 Admin</button>
+</header>
+<main>
+  <!-- LOJA (clientes) -->
+  <section id="loja">
+    <div class="bar"><input id="q" placeholder="🔎 Buscar produto..." oninput="renderShop()"><select id="cat" onchange="renderShop()"></select></div>
+    <div class="grid" id="shop"></div>
+  </section>
+
+  <!-- ADMIN (só você) -->
+  <section id="admin" class="hide">
+    <div id="gate" class="card" style="max-width:380px;margin:40px auto"></div>
+    <div id="panel" class="hide">
+      <div class="tabs" id="tabs"></div>
+      <div id="tab-resumo"></div>
+      <div id="tab-produtos" class="hide"></div>
+      <div id="tab-pedidos" class="hide"></div>
+      <div id="tab-config" class="hide"></div>
+    </div>
+  </section>
+</main>
+<div id="modal" class="modal hide"><div class="box" id="mbox"></div></div>
+
+<script>
+/* ===== CONFIGURE AQUI (opcional) =====
+   Para a loja funcionar em vários aparelhos (clientes verem seus produtos e PIX),
+   preencha os dados do seu Supabase. Sem isso, tudo fica salvo só neste navegador. */
+const SUPABASE_URL = 'https://ovejorngmiwhnreasqfl.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im92ZWpvcm5nbWl3aG5yZWFzcWZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3OTYxNTEsImV4cCI6MjEwNjM3MjE1MX0.xztwLgAYgwwCTtNB4Q7pTve3QLzDJVTHttSqnSrD8JE';
+/* ===================================== */
+
+const $=id=>document.getElementById(id);
+const money=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const LS={get:(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}},set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
+const toast=t=>{const e=document.createElement('div');e.className='toast';e.textContent=t;document.body.appendChild(e);setTimeout(()=>e.remove(),2500)};
+const sb=(SUPABASE_URL&&SUPABASE_KEY&&window.supabase)?supabase.createClient(SUPABASE_URL,SUPABASE_KEY):null;
+
+/* ---------- Camada de dados (Supabase ou navegador) ---------- */
+const db={
+  async list(t){if(sb){const {data,error}=await sb.from(t).select('*').order('created_at',{ascending:false});if(error){toast(error.message);return []}return data}return LS.get(t,[])},
+  async insert(t,row){if(sb){const {data,error}=await sb.from(t).insert(row).select().single();if(error){toast(error.message);return null}return data}
+    const a=LS.get(t,[]);row={...row,id:Date.now(),created_at:new Date().toISOString()};a.unshift(row);LS.set(t,a);return row},
+  async update(t,id,patch){if(sb){await sb.from(t).update(patch).eq('id',id)}else LS.set(t,LS.get(t,[]).map(r=>r.id==id?{...r,...patch}:r))},
+  async del(t,id){if(sb){await sb.from(t).delete().eq('id',id)}else LS.set(t,LS.get(t,[]).filter(r=>r.id!=id))},
+  async getCfg(){if(sb){const {data}=await sb.from('settings').select('data').eq('id',1).maybeSingle();return data?.data||{}}return LS.get('cfg',{})},
+  async setCfg(c){if(sb){const {error}=await sb.from('settings').upsert({id:1,data:c});if(error)toast(error.message)}else LS.set('cfg',c)}
+};
+let cfg={},products=[],orders=[],cart={},isAdmin=false;
+
+/* ---------- Senha (hash SHA-256) ---------- */
+async function hash(s){
+  if(crypto?.subtle){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('loja::'+s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
+  let h=5381;for(const c of 'loja::'+s)h=(h*33)^c.charCodeAt(0);return 'w'+(h>>>0).toString(16);
+}
+
+/* ---------- Navegação ---------- */
+function go(v){$('loja').classList.toggle('hide',v!=='loja');$('admin').classList.toggle('hide',v!=='admin');if(v==='admin')showGate()}
+function modal(h){$('mbox').innerHTML=h;$('modal').classList.remove('hide')}
+const closeModal=()=>$('modal').classList.add('hide');
+$('modal').onclick=e=>{if(e.target===$('modal'))closeModal()};
+
+/* ---------- LOJA ---------- */
+const pimg=p=>p.image_url?`<img class="pimg" src="${esc(p.image_url)}" alt="" onerror="this.outerHTML='<div class=pimg>📦</div>'">`:'<div class="pimg">📦</div>';
+function renderShop(){
+  const cats=[...new Set(products.map(p=>p.category).filter(Boolean))],sel=$('cat').value;
+  $('cat').innerHTML='<option value="">Todas as categorias</option>'+cats.map(c=>`<option ${c===sel?'selected':''}>${esc(c)}</option>`).join('');
+  const q=$('q').value.toLowerCase(),c=$('cat').value;
+  const L=products.filter(p=>(!c||p.category===c)&&(!q||(p.name+' '+(p.description||'')).toLowerCase().includes(q)));
+  $('shop').innerHTML=L.length?L.map(p=>{const out=p.stock!=null&&p.stock<=0;return `<div class="card">${pimg(p)}<h3>${esc(p.name)}</h3>
+    <div class="mu">${esc(p.description||'')}</div><div class="price">${money(p.price)}</div>
+    ${out?'<div class="tag cancelado" style="margin-top:8px;display:inline-block">Esgotado</div>':`<div class="row"><div class="qty"><button onclick="chg('${p.id}',-1)">−</button><span id="q${p.id}">${cart[p.id]||0}</span><button onclick="chg('${p.id}',1)">+</button></div>
+    <button class="btn" style="flex:1" onclick="chg('${p.id}',1);toast('Adicionado ✅')">Comprar</button></div>`}</div>`}).join(''):'<p class="mu">Nenhum produto encontrado.</p>';
+  $('cnt').textContent=Object.values(cart).reduce((a,b)=>a+b,0);
+}
+function chg(id,d){const p=products.find(x=>x.id==id);let n=Math.max(0,(cart[id]||0)+d);if(p?.stock!=null&&n>p.stock){n=p.stock;toast('Limite de estoque')}
+  n?cart[id]=n:delete cart[id];if($('q'+id))$('q'+id).textContent=n;$('cnt').textContent=Object.values(cart).reduce((a,b)=>a+b,0)}
+const lines=()=>Object.entries(cart).map(([id,q])=>({p:products.find(x=>x.id==id),q})).filter(l=>l.p);
+const total=()=>Math.round(lines().reduce((a,l)=>a+l.p.price*l.q,0)*100)/100;
+function openCart(){
+  const L=lines();
+  if(!L.length)return modal('<h3>🛒 Carrinho vazio</h3><p class="mu">Escolha produtos na loja.</p><button class="btn l" onclick="closeModal()">Fechar</button>');
+  modal(`<h3 style="margin-top:0">🛒 Seu carrinho</h3>${L.map(l=>`<div class="item"><span>${esc(l.p.name)}<br><span class="mu">${money(l.p.price)} cada</span></span>
+    <span class="qty"><button onclick="chg('${l.p.id}',-1);openCart()">−</button><span>${l.q}</span><button onclick="chg('${l.p.id}',1);openCart()">+</button></span><b>${money(l.p.price*l.q)}</b></div>`).join('')}
+  <div class="tot"><span>Total</span><span>${money(total())}</span></div>
+  <label>Seu nome</label><input id="cn"><label>WhatsApp / telefone</label><input id="cp" placeholder="(00) 00000-0000"><label>E-mail (opcional)</label><input id="ce" type="email">
+  <button class="btn g" style="width:100%" onclick="checkout()">Pagar com PIX</button>
+  <button class="btn l" style="width:100%;margin-top:8px" onclick="closeModal()">Continuar comprando</button>`);
+}
+async function checkout(){
+  const name=$('cn').value.trim(),phone=$('cp').value.trim();
+  if(!name||phone.length<8)return toast('Preencha nome e telefone');
+  if(!mpOn())return toast('Pagamento ainda não configurado pela loja');
+  const L=lines(),amount=total(),email=($('ce')?.value||'').trim()||'cliente@email.com';
+  modal('<p class="center">Gerando QR Code PIX…</p>');
+  let pay;
+  try{
+    pay=await mp({action:'create',amount,description:L.map(l=>l.q+'x '+l.p.name).join(', ').slice(0,200),email});
+    if(!pay?.point_of_interaction?.transaction_data)throw new Error(mpErr(pay));
+  }catch(e){return modal(`<h3>Erro no pagamento</h3><p class="mu">${esc(e.message)}</p><button class="btn l" onclick="openCart()">Voltar</button>`)}
+  const td=pay.point_of_interaction.transaction_data,payId=pay.id;
+  const order=await db.insert('orders',{customer_name:name,customer_phone:phone,items:L.map(l=>({id:l.p.id,name:l.p.name,qty:l.q,price:l.p.price})),total:amount,payment_id:String(payId),status:'aguardando'});
+  if(!order)return closeModal();
+  const items=L.map(l=>({id:l.p.id,qty:l.q}));
+  cart={};renderShop();
+  modal(`<h3 class="center" style="margin-top:0">Pague ${money(amount)} via PIX</h3>
+    <div id="qr"><img src="data:image/png;base64,${td.qr_code_base64}" alt="QR PIX"></div>
+    <p class="mu center">Escaneie no app do seu banco ou use o PIX copia e cola:</p>
+    <textarea id="pc" readonly rows="3">${td.qr_code}</textarea>
+    <button class="btn" style="width:100%;margin:6px 0" onclick="navigator.clipboard.writeText($('pc').value).then(()=>toast('Código copiado!'))">Copiar código PIX</button>
+    <p class="mu center">Pedido #${String(order.id).slice(-5)} registrado. A confirmação é automática.</p>
+    <p class="mu center" id="st">⏳ Aguardando pagamento…</p>
+    <button class="btn l" style="width:100%" onclick="closeModal()">Fechar</button>`);
+  startPoll(payId,order.id,items);
+}
+
+/* ---------- Mercado Pago ---------- */
+function mpErr(p){
+  const c=(p?.cause||[]).map(x=>x.description||x.code).filter(Boolean).join(' | ');
+  return [p?.message,c,p?.error,p?.status&&typeof p.status==='number'?'(HTTP '+p.status+')':''].filter(Boolean).join(' — ')||'Resposta vazia do Mercado Pago';
+}
+const mpOn=()=>!!(cfg.mpFn||LS.get('mpTk',''));
+async function mp(body){
+  let r;
+  try{
+    if(cfg.mpFn){
+      r=await fetch(cfg.mpFn,{method:'POST',headers:{'Content-Type':'application/json',...(SUPABASE_KEY?{Authorization:'Bearer '+SUPABASE_KEY,apikey:SUPABASE_KEY}:{})},body:JSON.stringify(body)});
+    }else{
+      const tk=LS.get('mpTk','');if(!tk)throw new Error('Token não configurado');
+      const h={Authorization:'Bearer '+tk,'Content-Type':'application/json'};
+      r=body.action==='status'
+        ?await fetch('https://api.mercadopago.com/v1/payments/'+body.id,{headers:h})
+        :await fetch('https://api.mercadopago.com/v1/payments',{method:'POST',headers:{...h,'X-Idempotency-Key':crypto.randomUUID()},body:JSON.stringify({transaction_amount:body.amount,description:body.description,payment_method_id:'pix',payer:{email:body.email}})});
+    }
+  }catch(e){
+    if(e.message==='Token não configurado')throw e;
+    throw new Error(cfg.mpFn?'Não consegui acessar a Edge Function. Confira a URL e se ela foi publicada (deploy).':'O navegador bloqueou a chamada direta ao Mercado Pago (CORS). Use a Edge Function e cole a URL dela em Configurações.');
+  }
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error((d.message||d.error||('Erro '+r.status))+(d.cause?.[0]?.description?' — '+d.cause[0].description:''));
+  return d;
+}
+let poll;
+function startPoll(pid,oid,items){
+  clearInterval(poll);
+  poll=setInterval(async()=>{
+    try{const s=await mp({action:'status',id:pid});
+      if(s.status==='approved'){clearInterval(poll);await db.update('orders',oid,{status:'pago'});
+        for(const i of items){const p=products.find(x=>x.id==i.id);if(p&&p.stock!=null)await db.update('products',p.id,{stock:Math.max(0,p.stock-i.qty)})}
+        await reload();
+        if($('st')){$('st').innerHTML='<b style="color:var(--ok)">✅ Pagamento aprovado! Obrigado pela compra.</b>'}}
+    }catch{}
+  },4000);
+}
+async function syncMp(){
+  let n=0;
+  for(const o of orders.filter(o=>o.status==='aguardando'&&o.payment_id)){
+    try{const s=await mp({action:'status',id:o.payment_id});if(s.status==='approved'){await setStatus(o.id,'pago');n++}}catch{}
+  }
+  toast(n?n+' pagamento(s) confirmado(s) ✅':'Nenhum pagamento novo');
+}
+async function saveMp(){
+  cfg.mpFn=$('m1').value.trim();await db.setCfg(cfg);
+  LS.set('mpTk',$('m2').value.trim());toast('Mercado Pago salvo ✅');
+}
+
+/* ---------- ADMIN ---------- */
+function showGate(){
+  if(isAdmin){$('gate').classList.add('hide');$('panel').classList.remove('hide');return openTab('resumo')}
+  $('panel').classList.add('hide');$('gate').classList.remove('hide');
+  const first=!cfg.pwHash;
+  $('gate').innerHTML=first?`<h3 style="margin-top:0">🔐 Criar senha de administrador</h3><p class="mu">Primeiro acesso: defina sua senha. Ela será pedida nas próximas vezes.</p>
+    <input id="p1" type="password" placeholder="Nova senha (mín. 6 caracteres)"><input id="p2" type="password" placeholder="Repita a senha"><button class="btn" style="width:100%" onclick="setPw()">Criar senha e entrar</button>`
+    :`<h3 style="margin-top:0">🔒 Área do administrador</h3><input id="p1" type="password" placeholder="Senha" onkeydown="if(event.key==='Enter')login()"><button class="btn" style="width:100%" onclick="login()">Entrar</button>`;
+}
+async function setPw(){
+  const a=$('p1').value,b=$('p2').value;
+  if(a.length<6)return toast('Senha muito curta');if(a!==b)return toast('As senhas não conferem');
+  cfg.pwHash=await hash(a);await db.setCfg(cfg);isAdmin=true;toast('Senha criada ✅');showGate();
+}
+async function login(){if(await hash($('p1').value)===cfg.pwHash){isAdmin=true;showGate()}else toast('Senha incorreta')}
+function openTab(t){
+  ['resumo','produtos','pedidos','config'].forEach(x=>$('tab-'+x).classList.toggle('hide',x!==t));
+  $('tabs').innerHTML=[['resumo','📊 Resumo'],['produtos','📦 Produtos'],['pedidos','🧾 Pedidos'],['config','⚙️ Configurações']].map(([k,l])=>`<button class="${k===t?'on':''}" onclick="openTab('${k}')">${l}</button>`).join('')+'<button onclick="isAdmin=false;go(\'loja\')" style="margin-left:auto">Sair</button>';
+  ({resumo:rResumo,produtos:rProdutos,pedidos:rPedidos,config:rConfig})[t]();
+}
+function rResumo(){
+  const pagos=orders.filter(o=>o.status==='pago'),pend=orders.filter(o=>o.status==='aguardando');
+  $('tab-resumo').innerHTML=`<div class="stats"><div class="card"><span class="mu">Faturamento</span><b>${money(pagos.reduce((a,o)=>a+Number(o.total),0))}</b></div>
+   <div class="card"><span class="mu">Pedidos pagos</span><b>${pagos.length}</b></div><div class="card"><span class="mu">Aguardando pagamento</span><b>${pend.length}</b></div><div class="card"><span class="mu">Produtos</span><b>${products.length}</b></div></div>
+   ${!mpOn()?'<div class="card" style="border-color:#f59e0b">⚠️ Cole seu Access Token do Mercado Pago na aba Configurações para receber pagamentos.</div>':''}`;
+}
+function rProdutos(){
+  $('tab-produtos').innerHTML=`<div class="card" style="margin-bottom:16px"><h3 style="margin-top:0" id="ft">Novo produto</h3><input type="hidden" id="eid">
+   <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0 12px"><div><label>Nome</label><input id="pn"></div><div><label>Preço (R$)</label><input id="pp" type="number" step="0.01"></div>
+   <div><label>Categoria</label><input id="pc2" placeholder="Ex: Roupas"></div><div><label>Estoque (vazio = ilimitado)</label><input id="ps" type="number"></div></div>
+   <label>Descrição</label><input id="pd"><label>URL da imagem</label><input id="pi" placeholder="https://...">
+   <button class="btn g" onclick="saveProd()">Salvar produto</button> <button class="btn l" onclick="rProdutos()">Limpar</button></div>
+   <div class="grid">${products.map(p=>`<div class="card">${pimg(p)}<h3>${esc(p.name)}</h3><div class="price">${money(p.price)}</div>
+   <div class="mu">${esc(p.category||'Sem categoria')} · Estoque: ${p.stock??'∞'}</div><div class="row"><button class="btn s" onclick="editProd('${p.id}')">Editar</button><button class="btn r s" onclick="delProd('${p.id}')">Excluir</button></div></div>`).join('')}</div>`;
+}
+async function saveProd(){
+  const price=parseFloat($('pp').value),name=$('pn').value.trim();if(!name||!(price>=0))return toast('Nome e preço válidos');
+  const row={name,price,category:$('pc2').value.trim()||null,description:$('pd').value.trim()||null,image_url:$('pi').value.trim()||null,stock:$('ps').value===''?null:parseInt($('ps').value)};
+  $('eid').value?await db.update('products',$('eid').value,row):await db.insert('products',row);
+  toast('Produto salvo ✅');await reload();rProdutos();
+}
+function editProd(id){const p=products.find(x=>x.id==id);$('eid').value=p.id;$('pn').value=p.name;$('pp').value=p.price;$('pc2').value=p.category||'';$('ps').value=p.stock??'';$('pd').value=p.description||'';$('pi').value=p.image_url||'';$('ft').textContent='Editando produto';scrollTo(0,0)}
+async function delProd(id){if(!confirm('Excluir produto?'))return;await db.del('products',id);await reload();rProdutos()}
+function rPedidos(){
+  $('tab-pedidos').innerHTML=(mpOn()?'<button class="btn" style="margin-bottom:12px" onclick="syncMp()">🔄 Sincronizar pagamentos Mercado Pago</button>':'')+(orders.length?orders.map(o=>`<div class="card" style="margin-bottom:10px"><div class="row" style="margin:0;justify-content:space-between"><b>#${String(o.id).slice(-5)} · ${esc(o.customer_name)}</b><span class="tag ${o.status==='aguardando'?'':o.status}">${o.status}</span></div>
+   <div class="mu">${esc(o.customer_phone)} · ${new Date(o.created_at).toLocaleString('pt-BR')}</div>
+   <div style="margin:8px 0">${(o.items||[]).map(i=>`${i.qty}× ${esc(i.name)}`).join(', ')}</div><b>${money(o.total)}</b>
+   ${o.status==='aguardando'?`<div class="row"><button class="btn g s" onclick="setStatus('${o.id}','pago')">✅ Confirmar pagamento</button><button class="btn r s" onclick="setStatus('${o.id}','cancelado')">Cancelar</button></div>`:''}</div>`).join(''):'<p class="mu">Nenhum pedido ainda.</p>');
+}
+async function setStatus(id,st){
+  const o=orders.find(x=>x.id==id);await db.update('orders',id,{status:st});
+  if(st==='pago')for(const i of o.items){const p=products.find(x=>x.id==i.id);if(p&&p.stock!=null)await db.update('products',p.id,{stock:Math.max(0,p.stock-i.qty)})}
+  await reload();rPedidos();
+}
+function rConfig(){
+  $('tab-config').innerHTML=`<div class="card"><h3 style="margin-top:0">Loja</h3>
+   <label>Nome da loja</label><input id="c1" value="${esc(cfg.storeName)}"><button class="btn g" onclick="saveCfg()">Salvar</button></div>
+   <div class="card" style="margin-top:14px"><h3 style="margin-top:0">Mercado Pago (API Token)</h3>
+   <p class="mu" style="margin-top:0">O QR Code PIX é gerado pela API do Mercado Pago e o pagamento é confirmado automaticamente. O dinheiro cai na sua conta Mercado Pago.</p>
+   <label>Access Token (APP_USR-...)</label><input id="m2" type="password" value="${esc(LS.get('mpTk',''))}" placeholder="Fica salvo só neste navegador">
+   <label>URL da Edge Function (necessária para os clientes em outros aparelhos)</label><input id="m1" value="${esc(cfg.mpFn)}" placeholder="https://SEU-PROJETO.supabase.co/functions/v1/mp">
+   <button class="btn g" onclick="saveMp()">Salvar Mercado Pago</button>
+   <p class="mu">O token nunca é enviado ao Supabase.</p></div>
+   <div class="card" style="margin-top:14px"><h3 style="margin-top:0">Alterar senha</h3><input id="n1" type="password" placeholder="Nova senha"><button class="btn" onclick="chPw()">Alterar senha</button></div>
+   <div class="card mu" style="margin-top:14px">Banco de dados: <b>${sb?'Supabase conectado ✅':'Somente neste navegador (preencha SUPABASE_URL e SUPABASE_KEY no topo do código para usar o Supabase)'}</b></div>`;
+}
+async function saveCfg(){cfg={...cfg,storeName:$('c1').value.trim()};await db.setCfg(cfg);applyBrand();toast('Configurações salvas ✅')}
+async function chPw(){const v=$('n1').value;if(v.length<6)return toast('Mínimo 6 caracteres');cfg.pwHash=await hash(v);await db.setCfg(cfg);toast('Senha alterada ✅')}
+const applyBrand=()=>{$('brand').textContent='🛍️ '+(cfg.storeName||'Minha Loja');document.title=cfg.storeName||'Minha Loja'};
+async function reload(){products=await db.list('products');orders=isAdmin?await db.list('orders'):[];renderShop()}
+(async()=>{cfg=await db.getCfg();applyBrand();await reload()})();
+</script>
+</body>
+</html>
