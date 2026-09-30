@@ -132,12 +132,26 @@ function openCart(){
     <span class="qty"><button onclick="chg('${l.p.id}',-1);openCart()">−</button><span>${l.q}</span><button onclick="chg('${l.p.id}',1);openCart()">+</button></span><b>${money(l.p.price*l.q)}</b></div>`).join('')}
   <div class="tot"><span>Total</span><span>${money(total())}</span></div>
   <label>Seu nome</label><input id="cn"><label>WhatsApp / telefone</label><input id="cp" placeholder="(00) 00000-0000"><label>E-mail (opcional)</label><input id="ce" type="email">
+  <h4 style="margin:6px 0">📍 Endereço de entrega</h4>
+  <label>CEP</label><input id="ad_cep" inputmode="numeric" maxlength="9" placeholder="00000-000" onblur="buscaCep()">
+  <label>Rua</label><input id="ad_rua">
+  <div style="display:flex;gap:8px"><div style="flex:1"><label>Número</label><input id="ad_num"></div><div style="flex:2"><label>Complemento</label><input id="ad_comp" placeholder="Apto, bloco..."></div></div>
+  <label>Bairro</label><input id="ad_bai">
+  <label>Cidade / UF</label><input id="ad_cid" placeholder="Ex: Curitiba - PR">
   <button class="btn g" style="width:100%" onclick="checkout()">Pagar com PIX</button>
   <button class="btn l" style="width:100%;margin-top:8px" onclick="closeModal()">Continuar comprando</button>`);
+}
+async function buscaCep(){
+  const c=($('ad_cep').value||'').replace(/\D/g,'');if(c.length!==8)return;
+  try{const d=await (await fetch('https://viacep.com.br/ws/'+c+'/json/')).json();
+    if(!d.erro){$('ad_rua').value=d.logradouro||'';$('ad_bai').value=d.bairro||'';$('ad_cid').value=(d.localidade||'')+' - '+(d.uf||'');$('ad_num').focus()}}catch{}
 }
 async function checkout(){
   const name=$('cn').value.trim(),phone=$('cp').value.trim();
   if(!name||phone.length<8)return toast('Preencha nome e telefone');
+  const g=id=>($(id)?.value||'').trim();
+  if(!g('ad_rua')||!g('ad_num')||!g('ad_cid'))return toast('Preencha o endereço: rua, número e cidade');
+  const address=`${g('ad_rua')}, ${g('ad_num')}${g('ad_comp')?' - '+g('ad_comp'):''}${g('ad_bai')?' - '+g('ad_bai'):''}, ${g('ad_cid')}${g('ad_cep')?' - CEP '+g('ad_cep'):''}`;
   if(!mpOn())return toast('Pagamento ainda não configurado pela loja');
   const L=lines(),amount=total(),email=($('ce')?.value||'').trim()||'cliente@email.com';
   modal('<p class="center">Gerando QR Code PIX…</p>');
@@ -147,7 +161,7 @@ async function checkout(){
     if(!pay?.point_of_interaction?.transaction_data)throw new Error(mpErr(pay));
   }catch(e){return modal(`<h3>Erro no pagamento</h3><p class="mu">${esc(e.message)}</p><button class="btn l" onclick="openCart()">Voltar</button>`)}
   const td=pay.point_of_interaction.transaction_data,payId=pay.id;
-  const order=await db.insert('orders',{customer_name:name,customer_phone:phone,items:L.map(l=>({id:l.p.id,name:l.p.name,qty:l.q,price:l.p.price})),total:amount,payment_id:String(payId),status:'aguardando'});
+  const order=await db.insert('orders',{customer_name:name,customer_phone:phone,address,items:L.map(l=>({id:l.p.id,name:l.p.name,qty:l.q,price:l.p.price})),total:amount,payment_id:String(payId),status:'aguardando'});
   if(!order)return closeModal();
   const items=L.map(l=>({id:l.p.id,qty:l.q}));cur={order};
   cart={};renderShop();
@@ -195,19 +209,28 @@ async function mp(body){
   return d;
 }
 let poll,cur=null;
+function showPaid(o,test){
+  modal(`<div class="center" style="padding:10px 0"><div style="font-size:2.6rem">✅</div>
+    <h3 style="margin:8px 0">${test?'Pagamento simulado (teste)':'Pagamento confirmado!'}</h3>
+    <p><b>📦 Seu pedido #${String(o.id).slice(-5)} está em preparação.</b></p>
+    ${o.address?`<p class="mu">Entrega em:<br>${esc(o.address)}</p>`:''}
+    <p class="mu">Obrigado pela compra!</p>
+    <button class="btn" style="width:100%" onclick="closeModal()">Fechar</button></div>`);
+}
 const testOn=()=>cfg.testMode!==false;
 async function decStock(items){for(const i of items){const p=products.find(x=>x.id==i.id);if(p&&p.stock!=null){p.stock=Math.max(0,p.stock-i.qty);await db.update('products',p.id,{stock:p.stock})}}}
 async function notify(o,test){
   if(!cfg.mpFn)return{ok:false,msg:'configure a URL da Edge Function'};
   if(!test&&!o.payment_id)return{ok:false,msg:'sem pagamento'};
-  try{await mp({action:'notify',test:!!test,payment_id:o.payment_id,customer:o.customer_name,phone:o.customer_phone,items:o.items,total:o.total});return{ok:true}}
+  try{await mp({action:'notify',test:!!test,payment_id:o.payment_id,customer:o.customer_name,phone:o.customer_phone,address:o.address,items:o.items,total:o.total});return{ok:true}}
   catch(e){return{ok:false,msg:e.message}}
 }
 async function testPay(){
   const o=cur?.order;if(!o)return;clearInterval(poll);
   await db.update('orders',o.id,{status:'pago'});await decStock(o.items);await reload();
   const r=await notify(o,true);
-  modal(`<div class="center" style="padding:10px 0"><div style="font-size:2.5rem">✅</div><h3>Pagamento simulado (teste)</h3><p class="mu">Pedido #${String(o.id).slice(-5)} marcado como pago.<br>${r.ok?'📧 E-mail de aviso enviado.':'📧 E-mail não enviado: '+esc(r.msg)}</p><button class="btn" style="width:100%" onclick="closeModal()">Fechar</button></div>`);
+  showPaid(o,true);
+  toast(r.ok?'📧 E-mail de aviso enviado':'📧 E-mail não enviado: '+r.msg);
 }
 function startPoll(pid,oid,items){
   clearInterval(poll);
@@ -215,7 +238,7 @@ function startPoll(pid,oid,items){
     try{const s=await mp({action:'status',id:pid});
       if(s.status==='approved'){clearInterval(poll);await db.update('orders',oid,{status:'pago'});
         await decStock(items);await reload();if(cur?.order?.id==oid)notify(cur.order,false);
-        if($('st')){$('st').innerHTML='<b style="color:var(--ok)">✅ Pagamento aprovado! Obrigado pela compra.</b>'}}
+        if($('st')&&cur?.order?.id==oid)showPaid(cur.order)}
     }catch{}
   },4000);
 }
@@ -277,7 +300,7 @@ async function delProd(id){if(!confirm('Excluir produto?'))return;await db.del('
 function rPedidos(){
   $('tab-pedidos').innerHTML=(mpOn()?'<button class="btn" style="margin-bottom:12px" onclick="syncMp()">🔄 Sincronizar pagamentos Mercado Pago</button>':'')+(orders.length?orders.map(o=>`<div class="card" style="margin-bottom:10px"><div class="row" style="margin:0;justify-content:space-between"><b>#${String(o.id).slice(-5)} · ${esc(o.customer_name)}</b><span class="tag ${o.status==='aguardando'?'':o.status}">${o.status}</span></div>
    <div class="mu">${esc(o.customer_phone)} · ${new Date(o.created_at).toLocaleString('pt-BR')}</div>
-   <div style="margin:8px 0">${(o.items||[]).map(i=>`${i.qty}× ${esc(i.name)}`).join(', ')}</div><b>${money(o.total)}</b>
+   ${o.address?`<div class="mu">📍 ${esc(o.address)}</div>`:''}<div style="margin:8px 0">${(o.items||[]).map(i=>`${i.qty}× ${esc(i.name)}`).join(', ')}</div><b>${money(o.total)}</b>
    ${o.status==='aguardando'?`<div class="row"><button class="btn g s" onclick="setStatus('${o.id}','pago')">✅ Confirmar pagamento</button><button class="btn r s" onclick="setStatus('${o.id}','cancelado')">Cancelar</button></div>`:''}</div>`).join(''):'<p class="mu">Nenhum pedido ainda.</p>');
 }
 async function setStatus(id,st){
