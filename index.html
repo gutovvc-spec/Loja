@@ -6,31 +6,33 @@
 <title>Minha Loja</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-:root{--bg:#f4f6fb;--card:#fff;--tx:#1b2333;--mu:#6b7280;--pr:#4f46e5;--ok:#16a34a;--rd:#dc2626;--bd:#e5e7eb}
+:root{--bg:#f4f6fb;--card:#fff;--tx:#1b2333;--mu:#6b7280;--pr:#4f46e5;--ok:#16a34a;--rd:#dc2626;--bd:#e5e7eb;--soft:#eceef4}
+[data-theme=dark]{color-scheme:dark;--bg:#0f1420;--card:#1a2132;--tx:#e8ecf5;--mu:#94a0b8;--pr:#6366f1;--bd:#2a3349;--soft:#262f45}
+[data-theme=dark] .tag{background:#422f0a;color:#fcd34d}[data-theme=dark] .tag.pago{background:#0f3a24;color:#86efac}[data-theme=dark] .tag.cancelado{background:#452020;color:#fca5a5}
 *{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:var(--bg);color:var(--tx)}
 header{background:var(--card);border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:10px;padding:12px 20px;flex-wrap:wrap}
 header h1{font-size:1.2rem;margin:0;flex:1;cursor:pointer}
 .btn{border:0;background:var(--pr);color:#fff;padding:10px 16px;border-radius:10px;font-size:.92rem;cursor:pointer}
-.btn.g{background:var(--ok)}.btn.r{background:var(--rd)}.btn.l{background:#eceef4;color:var(--tx)}.btn.s{padding:6px 10px;font-size:.8rem}
+.btn.g{background:var(--ok)}.btn.r{background:var(--rd)}.btn.l{background:var(--soft);color:var(--tx)}.btn.s{padding:6px 10px;font-size:.8rem}
 main{max-width:1050px;margin:20px auto;padding:0 16px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px}
-.pimg{width:100%;height:150px;object-fit:cover;border-radius:10px;background:#eceef4;display:flex;align-items:center;justify-content:center;font-size:2.5rem}
+.pimg{width:100%;height:150px;object-fit:cover;border-radius:10px;background:var(--soft);display:flex;align-items:center;justify-content:center;font-size:2.5rem}
 h3{margin:10px 0 2px;font-size:1rem}.price{font-weight:700;color:var(--pr)}.mu{color:var(--mu);font-size:.85rem}
 .row{display:flex;align-items:center;gap:8px;margin-top:10px}
 .qty{display:flex;align-items:center;border:1px solid var(--bd);border-radius:10px}
-.qty button{border:0;background:none;width:32px;height:34px;font-size:1.1rem;cursor:pointer}.qty span{min-width:26px;text-align:center}
-input,select,textarea{width:100%;padding:10px;border:1px solid var(--bd);border-radius:10px;font:inherit;margin:4px 0 10px}
+.qty button{border:0;background:none;color:var(--tx);width:32px;height:34px;font-size:1.1rem;cursor:pointer}.qty span{min-width:26px;text-align:center}
+input,select,textarea{background:var(--card);color:var(--tx);width:100%;padding:10px;border:1px solid var(--bd);border-radius:10px;font:inherit;margin:4px 0 10px}
 label{font-size:.85rem;color:var(--mu)}
 .hide{display:none!important}
 .bar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}.bar input,.bar select{margin:0;flex:1;min-width:140px}
-.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tabs button{border:0;background:#eceef4;padding:9px 14px;border-radius:10px;cursor:pointer}.tabs button.on{background:var(--pr);color:#fff}
+.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tabs button{border:0;background:var(--soft);padding:9px 14px;border-radius:10px;cursor:pointer}.tabs button.on{background:var(--pr);color:#fff}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px}.stats b{font-size:1.5rem;display:block}
 .modal{position:fixed;inset:0;background:#0007;display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
-.box{background:#fff;border-radius:16px;padding:22px;width:100%;max-width:430px;max-height:92vh;overflow:auto}
+.box{background:var(--card);border-radius:16px;padding:22px;width:100%;max-width:430px;max-height:92vh;overflow:auto}
 .item{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--bd);font-size:.92rem}
 .tot{display:flex;justify-content:space-between;font-weight:700;font-size:1.15rem;margin:14px 0}
-#qr{width:230px;margin:10px auto;display:block}#qr img{width:100%}
+#qr{width:230px;margin:10px auto;display:block;background:#fff;padding:8px;border-radius:12px}#qr img{width:100%}
 .tag{font-size:.75rem;padding:3px 9px;border-radius:99px;background:#fef3c7;color:#92400e}.tag.pago{background:#dcfce7;color:#166534}.tag.cancelado{background:#fee2e2;color:#991b1b}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1b2333;color:#fff;padding:10px 18px;border-radius:10px;z-index:20}
 .center{text-align:center}
@@ -40,6 +42,7 @@ label{font-size:.85rem;color:var(--mu)}
 <header>
   <h1 id="brand" onclick="go('loja')">🛍️ Minha Loja</h1>
   <button class="btn" onclick="openCart()">🛒 Carrinho <b id="cnt">0</b></button>
+  <button class="btn l" id="themeBtn" onclick="toggleTheme()">🌙</button>
   <button class="btn l" onclick="go('admin')">🔒 Admin</button>
 </header>
 <main>
@@ -67,10 +70,13 @@ label{font-size:.85rem;color:var(--mu)}
 /* ===== CONFIGURE AQUI (opcional) =====
    Para a loja funcionar em vários aparelhos (clientes verem seus produtos e PIX),
    preencha os dados do seu Supabase. Sem isso, tudo fica salvo só neste navegador. */
-const SUPABASE_URL = 'https://ovejorngmiwhnreasqfl.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im92ZWpvcm5nbWl3aG5yZWFzcWZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3OTYxNTEsImV4cCI6MjEwNjM3MjE1MX0.xztwLgAYgwwCTtNB4Q7pTve3QLzDJVTHttSqnSrD8JE';
+const SUPABASE_URL = '';
+const SUPABASE_KEY = '';
 /* ===================================== */
 
+const applyTheme=t=>{document.documentElement.dataset.theme=t;const b=document.getElementById('themeBtn');if(b)b.textContent=t==='dark'?'☀️':'🌙'};
+function toggleTheme(){const t=document.documentElement.dataset.theme==='dark'?'light':'dark';try{localStorage.setItem('theme',t)}catch{}applyTheme(t)}
+{let t;try{t=localStorage.getItem('theme')}catch{}applyTheme(t||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'))}
 const $=id=>document.getElementById(id);
 const money=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -143,7 +149,7 @@ async function checkout(){
   const td=pay.point_of_interaction.transaction_data,payId=pay.id;
   const order=await db.insert('orders',{customer_name:name,customer_phone:phone,items:L.map(l=>({id:l.p.id,name:l.p.name,qty:l.q,price:l.p.price})),total:amount,payment_id:String(payId),status:'aguardando'});
   if(!order)return closeModal();
-  const items=L.map(l=>({id:l.p.id,qty:l.q}));
+  const items=L.map(l=>({id:l.p.id,qty:l.q}));cur={order};
   cart={};renderShop();
   modal(`<h3 class="center" style="margin-top:0">Pague ${money(amount)} via PIX</h3>
     <div id="qr"><img src="data:image/png;base64,${td.qr_code_base64}" alt="QR PIX"></div>
@@ -152,6 +158,7 @@ async function checkout(){
     <button class="btn" style="width:100%;margin:6px 0" onclick="navigator.clipboard.writeText($('pc').value).then(()=>toast('Código copiado!'))">Copiar código PIX</button>
     <p class="mu center">Pedido #${String(order.id).slice(-5)} registrado. A confirmação é automática.</p>
     <p class="mu center" id="st">⏳ Aguardando pagamento…</p>
+    ${testOn()?'<button class="btn" style="width:100%;margin-bottom:8px;background:#f59e0b" onclick="testPay()">🧪 Simular pagamento (TESTE)</button>':''}
     <button class="btn l" style="width:100%" onclick="closeModal()">Fechar</button>`);
   startPoll(payId,order.id,items);
 }
@@ -163,10 +170,11 @@ function mpErr(p){
 }
 const mpOn=()=>!!(cfg.mpFn||LS.get('mpTk',''));
 async function mp(body){
-  let r;
+  let r,ctl,t;
   try{
     if(cfg.mpFn){
-      r=await fetch(cfg.mpFn,{method:'POST',headers:{'Content-Type':'application/json',...(SUPABASE_KEY?{Authorization:'Bearer '+SUPABASE_KEY,apikey:SUPABASE_KEY}:{})},body:JSON.stringify(body)});
+      ctl=new AbortController();t=setTimeout(()=>ctl.abort(),20000);
+      r=await fetch(cfg.mpFn,{method:'POST',signal:ctl.signal,headers:{'Content-Type':'application/json',...(SUPABASE_KEY?{Authorization:'Bearer '+SUPABASE_KEY,apikey:SUPABASE_KEY}:{})},body:JSON.stringify(body)});
     }else{
       const tk=LS.get('mpTk','');if(!tk)throw new Error('Token não configurado');
       const h={Authorization:'Bearer '+tk,'Content-Type':'application/json'};
@@ -175,21 +183,38 @@ async function mp(body){
         :await fetch('https://api.mercadopago.com/v1/payments',{method:'POST',headers:{...h,'X-Idempotency-Key':crypto.randomUUID()},body:JSON.stringify({transaction_amount:body.amount,description:body.description,payment_method_id:'pix',payer:{email:body.email}})});
     }
   }catch(e){
+    clearTimeout(t);
     if(e.message==='Token não configurado')throw e;
-    throw new Error(cfg.mpFn?'Não consegui acessar a Edge Function. Confira a URL e se ela foi publicada (deploy).':'O navegador bloqueou a chamada direta ao Mercado Pago (CORS). Use a Edge Function e cole a URL dela em Configurações.');
+    if(e.name==='AbortError')throw new Error('A função demorou mais de 20s para responder. Veja os Logs dela no Supabase.');
+    throw new Error(cfg.mpFn?'Não consegui acessar a Edge Function. Confira o nome na URL e se ela foi publicada (Deploy).':'O navegador bloqueou a chamada direta ao Mercado Pago (CORS). Use a Edge Function.');
   }
-  const d=await r.json().catch(()=>({}));
-  if(!r.ok)throw new Error((d.message||d.error||('Erro '+r.status))+(d.cause?.[0]?.description?' — '+d.cause[0].description:''));
+  clearTimeout(t);
+  const txt=await r.text();let d;
+  try{d=JSON.parse(txt)}catch{throw new Error('Resposta inválida (HTTP '+r.status+'): '+txt.slice(0,150))}
+  if(!r.ok)throw new Error((d.message||d.msg||d.error||('Erro '+r.status))+(d.cause?.[0]?.description?' — '+d.cause[0].description:'')+' (HTTP '+r.status+')');
   return d;
 }
-let poll;
+let poll,cur=null;
+const testOn=()=>cfg.testMode!==false;
+async function decStock(items){for(const i of items){const p=products.find(x=>x.id==i.id);if(p&&p.stock!=null){p.stock=Math.max(0,p.stock-i.qty);await db.update('products',p.id,{stock:p.stock})}}}
+async function notify(o,test){
+  if(!cfg.mpFn)return{ok:false,msg:'configure a URL da Edge Function'};
+  if(!test&&!o.payment_id)return{ok:false,msg:'sem pagamento'};
+  try{await mp({action:'notify',test:!!test,payment_id:o.payment_id,customer:o.customer_name,phone:o.customer_phone,items:o.items,total:o.total});return{ok:true}}
+  catch(e){return{ok:false,msg:e.message}}
+}
+async function testPay(){
+  const o=cur?.order;if(!o)return;clearInterval(poll);
+  await db.update('orders',o.id,{status:'pago'});await decStock(o.items);await reload();
+  const r=await notify(o,true);
+  modal(`<div class="center" style="padding:10px 0"><div style="font-size:2.5rem">✅</div><h3>Pagamento simulado (teste)</h3><p class="mu">Pedido #${String(o.id).slice(-5)} marcado como pago.<br>${r.ok?'📧 E-mail de aviso enviado.':'📧 E-mail não enviado: '+esc(r.msg)}</p><button class="btn" style="width:100%" onclick="closeModal()">Fechar</button></div>`);
+}
 function startPoll(pid,oid,items){
   clearInterval(poll);
   poll=setInterval(async()=>{
     try{const s=await mp({action:'status',id:pid});
       if(s.status==='approved'){clearInterval(poll);await db.update('orders',oid,{status:'pago'});
-        for(const i of items){const p=products.find(x=>x.id==i.id);if(p&&p.stock!=null)await db.update('products',p.id,{stock:Math.max(0,p.stock-i.qty)})}
-        await reload();
+        await decStock(items);await reload();if(cur?.order?.id==oid)notify(cur.order,false);
         if($('st')){$('st').innerHTML='<b style="color:var(--ok)">✅ Pagamento aprovado! Obrigado pela compra.</b>'}}
     }catch{}
   },4000);
@@ -230,7 +255,7 @@ function rResumo(){
   const pagos=orders.filter(o=>o.status==='pago'),pend=orders.filter(o=>o.status==='aguardando');
   $('tab-resumo').innerHTML=`<div class="stats"><div class="card"><span class="mu">Faturamento</span><b>${money(pagos.reduce((a,o)=>a+Number(o.total),0))}</b></div>
    <div class="card"><span class="mu">Pedidos pagos</span><b>${pagos.length}</b></div><div class="card"><span class="mu">Aguardando pagamento</span><b>${pend.length}</b></div><div class="card"><span class="mu">Produtos</span><b>${products.length}</b></div></div>
-   ${!mpOn()?'<div class="card" style="border-color:#f59e0b">⚠️ Cole seu Access Token do Mercado Pago na aba Configurações para receber pagamentos.</div>':''}`;
+   ${testOn()?'<div class="card" style="border-color:#f59e0b;margin-bottom:12px">🧪 Modo teste ativo: os clientes veem o botão "Simular pagamento". Desative em Configurações antes de vender de verdade.</div>':''}${!mpOn()?'<div class="card" style="border-color:#f59e0b">⚠️ Cole seu Access Token do Mercado Pago na aba Configurações para receber pagamentos.</div>':''}`;
 }
 function rProdutos(){
   $('tab-produtos').innerHTML=`<div class="card" style="margin-bottom:16px"><h3 style="margin-top:0" id="ft">Novo produto</h3><input type="hidden" id="eid">
@@ -257,12 +282,12 @@ function rPedidos(){
 }
 async function setStatus(id,st){
   const o=orders.find(x=>x.id==id);await db.update('orders',id,{status:st});
-  if(st==='pago')for(const i of o.items){const p=products.find(x=>x.id==i.id);if(p&&p.stock!=null)await db.update('products',p.id,{stock:Math.max(0,p.stock-i.qty)})}
+  if(st==='pago'){await decStock(o.items);notify(o,false)}
   await reload();rPedidos();
 }
 function rConfig(){
   $('tab-config').innerHTML=`<div class="card"><h3 style="margin-top:0">Loja</h3>
-   <label>Nome da loja</label><input id="c1" value="${esc(cfg.storeName)}"><button class="btn g" onclick="saveCfg()">Salvar</button></div>
+   <label>Nome da loja</label><input id="c1" value="${esc(cfg.storeName)}"><label style="display:flex;align-items:center;cursor:pointer"><input type="checkbox" id="c2" style="width:auto;margin:0 8px 0 0" ${testOn()?'checked':''}> 🧪 Modo teste (botão "Simular pagamento" no checkout)</label><br><button class="btn g" onclick="saveCfg()">Salvar</button></div>
    <div class="card" style="margin-top:14px"><h3 style="margin-top:0">Mercado Pago (API Token)</h3>
    <p class="mu" style="margin-top:0">O QR Code PIX é gerado pela API do Mercado Pago e o pagamento é confirmado automaticamente. O dinheiro cai na sua conta Mercado Pago.</p>
    <label>Access Token (APP_USR-...)</label><input id="m2" type="password" value="${esc(LS.get('mpTk',''))}" placeholder="Fica salvo só neste navegador">
@@ -272,7 +297,7 @@ function rConfig(){
    <div class="card" style="margin-top:14px"><h3 style="margin-top:0">Alterar senha</h3><input id="n1" type="password" placeholder="Nova senha"><button class="btn" onclick="chPw()">Alterar senha</button></div>
    <div class="card mu" style="margin-top:14px">Banco de dados: <b>${sb?'Supabase conectado ✅':'Somente neste navegador (preencha SUPABASE_URL e SUPABASE_KEY no topo do código para usar o Supabase)'}</b></div>`;
 }
-async function saveCfg(){cfg={...cfg,storeName:$('c1').value.trim()};await db.setCfg(cfg);applyBrand();toast('Configurações salvas ✅')}
+async function saveCfg(){cfg={...cfg,storeName:$('c1').value.trim(),testMode:$('c2').checked};await db.setCfg(cfg);applyBrand();toast('Configurações salvas ✅')}
 async function chPw(){const v=$('n1').value;if(v.length<6)return toast('Mínimo 6 caracteres');cfg.pwHash=await hash(v);await db.setCfg(cfg);toast('Senha alterada ✅')}
 const applyBrand=()=>{$('brand').textContent='🛍️ '+(cfg.storeName||'Minha Loja');document.title=cfg.storeName||'Minha Loja'};
 async function reload(){products=await db.list('products');orders=isAdmin?await db.list('orders'):[];renderShop()}
