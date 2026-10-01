@@ -74,6 +74,12 @@ const SUPABASE_URL = 'https://ovejorngmiwhnreasqfl.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im92ZWpvcm5nbWl3aG5yZWFzcWZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3OTYxNTEsImV4cCI6MjEwNjM3MjE1MX0.xztwLgAYgwwCTtNB4Q7pTve3QLzDJVTHttSqnSrD8JE';
 /* ===================================== */
 
+/* ===== AVISO DE COMPRA NO SEU WHATSAPP (CallMeBot) =====
+   phone: SEU número (quem recebe), DDI + DDD + número, só dígitos
+   apikey: chave gerada pelo CallMeBot para o seu número */
+const WHATS_CONFIG = { phone: '5546920016778', apikey: '7605800' };
+/* ======================================================= */
+
 const applyTheme=t=>{document.documentElement.dataset.theme=t;const b=document.getElementById('themeBtn');if(b)b.textContent=t==='dark'?'☀️':'🌙'};
 function toggleTheme(){const t=document.documentElement.dataset.theme==='dark'?'light':'dark';try{localStorage.setItem('theme',t)}catch{}applyTheme(t)}
 {let t;try{t=localStorage.getItem('theme')}catch{}applyTheme(t||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'))}
@@ -219,7 +225,36 @@ function showPaid(o,test){
 }
 const testOn=()=>cfg.testMode!==false;
 async function decStock(items){for(const i of items){const p=products.find(x=>x.id==i.id);if(p&&p.stock!=null){p.stock=Math.max(0,p.stock-i.qty);await db.update('products',p.id,{stock:p.stock})}}}
+
+/* ---------- Aviso no WhatsApp (CallMeBot) ---------- */
+const wSent=new Set();
+function notificarCompra(p){
+  const linhas=[
+    p.teste?'🧪 *TESTE: compra simulada*':'🛒 *Nova compra!*',
+    p.pedido?'Pedido: #'+p.pedido:'',
+    'Cliente: '+(p.cliente||'não informado'),
+    p.telefone?'Telefone: '+p.telefone:'',
+    'Itens: '+(p.itens||'não informado'),
+    'Total: '+money(p.total),
+    p.endereco?'Entrega: '+p.endereco:'',
+    'Data: '+new Date().toLocaleString('pt-BR')
+  ].filter(Boolean);
+  const url='https://api.callmebot.com/whatsapp.php'+
+    '?phone='+encodeURIComponent(WHATS_CONFIG.phone)+
+    '&text='+encodeURIComponent(linhas.join('\n'))+
+    '&apikey='+encodeURIComponent(WHATS_CONFIG.apikey);
+  // no-cors: o navegador envia o pedido, mas não deixa a página ler a resposta
+  return fetch(url,{mode:'no-cors'});
+}
+function avisarWhats(o,test){
+  const k=o.id+(test?'-t':'');
+  if(wSent.has(k))return;wSent.add(k); // evita aviso duplicado do mesmo pedido
+  notificarCompra({teste:!!test,pedido:String(o.id).slice(-5),cliente:o.customer_name,telefone:o.customer_phone,
+    itens:(o.items||[]).map(i=>i.qty+'x '+i.name).join(', '),total:o.total,endereco:o.address}).catch(()=>{});
+}
+
 async function notify(o,test){
+  avisarWhats(o,test); // WhatsApp: dispara sempre que o pedido é pago (ou simulado)
   if(!cfg.mpFn)return{ok:false,msg:'configure a URL da Edge Function'};
   if(!test&&!o.payment_id)return{ok:false,msg:'sem pagamento'};
   try{await mp({action:'notify',test:!!test,payment_id:o.payment_id,customer:o.customer_name,phone:o.customer_phone,address:o.address,items:o.items,total:o.total});return{ok:true}}
@@ -230,7 +265,7 @@ async function testPay(){
   await db.update('orders',o.id,{status:'pago'});await decStock(o.items);await reload();
   const r=await notify(o,true);
   showPaid(o,true);
-  toast(r.ok?'📧 E-mail de aviso enviado':'📧 E-mail não enviado: '+r.msg);
+  toast(r.ok?'📱 WhatsApp e 📧 e-mail de aviso enviados':'📱 WhatsApp enviado · 📧 e-mail não enviado: '+r.msg);
 }
 function startPoll(pid,oid,items){
   clearInterval(poll);
