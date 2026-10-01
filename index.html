@@ -6,10 +6,12 @@
 <title>Minha Loja</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-:root{--bg:#f4f6fb;--card:#fff;--tx:#1b2333;--mu:#6b7280;--pr:#4f46e5;--ok:#16a34a;--rd:#dc2626;--bd:#e5e7eb;--soft:#eceef4}
-[data-theme=dark]{color-scheme:dark;--bg:#0f1420;--card:#1a2132;--tx:#e8ecf5;--mu:#94a0b8;--pr:#6366f1;--bd:#2a3349;--soft:#262f45}
+:root{--bg:#f4f6fb;--card:#fff;--tx:#1b2333;--mu:#6b7280;--pr:#4f46e5;--ok:#16a34a;--rd:#dc2626;--bd:#e5e7eb;--soft:#eceef4;--ov:rgba(255,255,255,.2)}
+[data-theme=dark]{color-scheme:dark;--bg:#0f1420;--card:#1a2132;--tx:#e8ecf5;--mu:#94a0b8;--pr:#6366f1;--bd:#2a3349;--soft:#262f45;--ov:rgba(0,0,0,.5)}
 [data-theme=dark] .tag{background:#422f0a;color:#fcd34d}[data-theme=dark] .tag.pago{background:#0f3a24;color:#86efac}[data-theme=dark] .tag.cancelado{background:#452020;color:#fca5a5}
 *{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:var(--bg);color:var(--tx)}
+body::before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradient(var(--ov),var(--ov)),url("https://www.image2url.com/r2/default/images/1790819343076-def2448d-c2f1-4103-aff5-3ac36e721187.webp") center/cover no-repeat}
+#shop>p{background:var(--card);padding:12px 14px;border-radius:10px;display:inline-block}
 header{background:var(--card);border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:10px;padding:12px 20px;flex-wrap:wrap}
 header h1{font-size:1.2rem;margin:0;flex:1}
 .btn{border:0;background:var(--pr);color:#fff;padding:10px 16px;border-radius:10px;font-size:.92rem;cursor:pointer}
